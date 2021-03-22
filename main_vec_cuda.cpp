@@ -4,29 +4,21 @@
 #include <limits.h>
 #include <algorithm>
 #include <fstream>
-#include <list>
-#include<omp.h>
+#include <omp.h>
+#include"kernel.h"
+#include"op.h"
+
 //#define debug
 
 using namespace std;
 
-struct op
-{
-    int nodeI;
-    int nodeJ;
-    float g;
-    friend ostream &operator<<(ostream &os, struct op &op_obj)
-    {
-        cout << "nodeI:" << op_obj.nodeI << "nodeJ:" << op_obj.nodeJ << "g:" << op_obj.g << endl;
-    }
-};
 
 class KL
 {
-    vector<vector<float>> graph;
-    vector<float> Dv;
-    vector<bool> locked;
-    vector<int> group;
+    float* graph;
+    float* Dv;
+    int* locked;
+    int* group;
     int netNum;
     int nodeNum;
 
@@ -35,10 +27,11 @@ public:
     {
         this->netNum = netNum;
         this->nodeNum = nodeNum;
-        this->Dv = vector<float>(nodeNum);
-        this->graph = vector<vector<float>>(nodeNum, vector<float>(nodeNum));
-        this->locked = vector<bool>(nodeNum, false);
-        this->group = vector<int>(nodeNum, 0);
+        this->Dv = (float*)malloc(nodeNum*sizeof(float));
+        this->graph = (float*)malloc(nodeNum*nodeNum*sizeof(float));
+        this->locked = (int*)malloc(nodeNum*sizeof(int));
+        this->group = (int*)malloc(nodeNum*sizeof(int));
+
         for (int i = 0; i <= nodeNum / 2; i++)
         {
             this->group[i] = 1;
@@ -56,13 +49,13 @@ public:
             {
                 if (group[i] ^ group[j])
                 {
-                    Dv[i] += graph[i][j];
-                    Dv[j] += graph[i][j];
+                    Dv[i] += graph[i*nodeNum+j];
+                    Dv[j] += graph[i*nodeNum+j];
                 }
                 else
                 {
-                    Dv[i] -= graph[i][j];
-                    Dv[j] -= graph[i][j];
+                    Dv[i] -= graph[i*nodeNum+j];
+                    Dv[j] -= graph[i*nodeNum+j];
                 }
             }
         }
@@ -73,30 +66,23 @@ public:
         while (1)
         {
 
-            cout << "new while iteration===============================" << endl;
 
-#ifdef debug
             cout << "new while iteration===============================" << endl;
-#endif
             computeDv();
             printDv();
             vector<struct op> opList;
-
-            list<int> group1List, group2List;
-            for (int i = 0; i < nodeNum; i++)
-            {
-                if (group[i] == 0)
-                    group1List.push_back(i);
-                else
-                    group2List.push_back(i);
-            }
             //compute gi
             for (int i = 0; i < nodeNum / 2; i++)
             {
-                opList.push_back(compute_g(group1List, group2List));
-                //cout << i << " new inner for iter=======" << endl;
 #ifdef debug
-                cout << opList.back();
+            cout << i << " new inner for iter=======" << endl;
+#endif
+            cout << i << " new inner for iter=======" << endl;
+                auto tmp = compute_g();
+                opList.push_back(*tmp);
+                cout <<"result: " <<"nodeI "<< tmp->nodeI << "nodeJ" << tmp->nodeJ << "g:" <<tmp->g<< endl;
+#ifdef debug
+                cout <<"result: " <<"nodeI "<< tmp->nodeI << "nodeJ" << tmp->nodeJ << "g:" <<tmp->g<< endl;
                 printLocked();
                 printDv();
 #endif
@@ -115,11 +101,8 @@ public:
                     maxGkIndex = i;
                 }
             }
-#ifdef debug
-            cout << "---maxGk:" << maxGk << "maxGkIndex:" << maxGkIndex << endl;
-#endif
-            cout << "---maxGk:" << maxGk << "maxGkIndex:" << maxGkIndex << endl;
-            if (maxGk <= 1e-5)
+            cout << "---------------maxGk:" << maxGk << " maxGkIndex:" << maxGkIndex << endl;
+            if (maxGk <= 0)
                 return;
             // change the group
             else
@@ -132,70 +115,48 @@ public:
             }
             printGroup();
             // unlock
-            /*
-            for(int i=0;i<nodeNum;i++){
+            for (int i = 0; i < nodeNum; i++)
+            {
                 locked[i] = 0;
             }
-            */
         }
     }
     // compteMaxG , lock ,recompute  Dv
-    struct op compute_g(list<int> &group1List, list<int> &group2List)
+    struct op* compute_g()
     {
         // nodeI ,nodeJ ,maxG
+        vector<int> op;
         float maxG = -1 * numeric_limits<float>::max();
         // nodeI :group 0
         // nodeJ:group 1
-        list<int>::iterator nodeI, nodeJ;
+        int nodeI = -1, nodeJ = -1;
         // find a pair makes the largest decrease
-        for (auto iter1 = group1List.begin(); iter1 != group1List.end(); iter1++)
-        {
-            for (auto iter2 = group2List.begin(); iter2 != group2List.end(); iter2++)
-            {
-                {
-                    float localG = Dv[*iter1] + Dv[*iter2] - 2 * graph[*iter1][*iter2];
-#ifdef debug
-                    cout << "iter1:" << *iter1 << "iter2:" << *iter2 << "localG" << localG << "maxG" << maxG << endl;
-#endif
-                    if (localG >= maxG)
-                    {
-
-                        /*
-                #ifdef debug
-                cout << "!!!!change i:" << i << "J:" << j << "localG" << localG <<"maxG"<< maxG<< endl;
-                #endif
-                */
-                        maxG = localG;
-                        nodeI = iter1;
-                        nodeJ = iter2;
-                    }
-                }
-            }
-        }
-        group1List.erase(nodeI);
-        group2List.erase(nodeJ);
-        recomputeDv(*nodeI, group1List, group2List);
-        recomputeDv(*nodeJ, group1List, group2List);
-        struct op result;
-        result.nodeI = *nodeI;
-        result.nodeJ = *nodeJ;
-        result.g = maxG;
+        struct op* result;
+        result = hostFE(nodeNum,graph,Dv,locked,group);
+        #ifdef debug
+        cout <<"compute_g------" << endl;
+        cout << "hostFE result" << "g: " << result->g << "nodeI: " << result->nodeI << "nodeJ: " << result->nodeJ << endl;
+        #endif
+        // postprocessing
+        locked[result->nodeI] = 1;
+        locked[result->nodeJ] = 1;
+        recomputeDv(result->nodeI);
+        recomputeDv(result->nodeJ);
         return result;
     }
-    void recomputeDv(int movedNode, list<int> &group1List, list<int> &group2List)
+    void recomputeDv(int node)
     {
-        for (auto item1 : group1List)
+        for (int i = 0; i < nodeNum; i++)
         {
-            Dv[item1] += group[item1] ^ group[movedNode] ? -2 * graph[item1][movedNode] : 2 * graph[item1][movedNode];
-        }
-        for (auto item2 : group2List)
-        {
-            Dv[item2] += group[item2] ^ group[movedNode] ? -2 * graph[item2][movedNode] : 2 * graph[item2][movedNode];
+            if (!locked[i])
+            {
+                Dv[i] += group[i] ^ group[node] ? -2 * graph[i*nodeNum+node] : 2 * graph[i*nodeNum+node];
+            }
         }
     }
     void insertWeight(int nodeI, int nodeJ, float netConnectNum)
     {
-        graph[nodeI][nodeJ] = 2 / netConnectNum;
+        graph[nodeI*nodeNum+nodeJ] = 2 / netConnectNum;
     }
     friend ostream &operator<<(ostream &, const KL &kl_obj);
     void printResult()
@@ -211,12 +172,10 @@ public:
     {
 #ifdef debug
         cout << "graph--------" << endl;
-        for (auto list : graph)
+        cout << "locked------------" << endl;
+        for (int i=0;i<nodeNum;i++)
         {
-            for (auto item : list)
-            {
-                cout << item << " ";
-            }
+            for (int j=0;j<nodeNum;j++) cout << graph[i*nodeNum+j] << " ";
             cout << endl;
         }
         cout << endl;
@@ -226,9 +185,9 @@ public:
     {
 #ifdef debug
         cout << "Dv------------" << endl;
-        for (auto item : Dv)
+        for (int i=0;i<nodeNum;i++)
         {
-            cout << item << " ";
+            cout << Dv[i] << " ";
         }
         cout << endl;
 #endif
@@ -236,10 +195,10 @@ public:
     void printGroup()
     {
 #ifdef debug
-        cout << "group--------" << endl;
-        for (auto item : group)
+        cout << "group------------" << endl;
+        for (int i=0;i<nodeNum;i++)
         {
-            cout << item << " ";
+            cout << group[i] << " ";
         }
         cout << endl;
 #endif
@@ -247,10 +206,10 @@ public:
     void printLocked()
     {
 #ifdef debug
-        cout << "locked-----------" << endl;
-        for (auto item : locked)
+        cout << "locked------------" << endl;
+        for (int i=0;i<nodeNum;i++)
         {
-            cout << item << " ";
+            cout << locked[i] << " ";
         }
         cout << endl;
 #endif

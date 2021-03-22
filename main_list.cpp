@@ -5,8 +5,7 @@
 #include <algorithm>
 #include <fstream>
 #include <list>
-#include <omp.h>
-//#define debug
+#define debug
 
 using namespace std;
 
@@ -94,8 +93,8 @@ public:
             for (int i = 0; i < nodeNum / 2; i++)
             {
                 opList.push_back(compute_g(group1List, group2List));
+                //cout << i << " new inner for iter=======" << endl;
 #ifdef debug
-                cout << i << " new inner for iter=======" << endl;
                 cout << opList.back();
                 printLocked();
                 printDv();
@@ -148,53 +147,28 @@ public:
         // nodeI :group 0
         // nodeJ:group 1
         list<int>::iterator nodeI, nodeJ;
-// find a pair makes the largest decrease
-#pragma omp parallel
+        // find a pair makes the largest decrease
+        for (auto iter1 = group1List.begin(); iter1 != group1List.end(); iter1++)
         {
-            int nthread = omp_get_num_threads();
-            int id = omp_get_thread_num();
-            float LmaxG = -1 * numeric_limits<float>::max();
-            list<int>::iterator LnodeI, LnodeJ;
-            auto iter1 = group1List.begin();
-            //advance(iter1,id);
-            for(int i=0;i<id&& iter1!=group1List.end();i++) iter1++;
-            for (; iter1 != group1List.end();)
+            for (auto iter2 = group2List.begin(); iter2 != group2List.end(); iter2++)
             {
-                //cout << "thread" << id << " outter" << endl;
-
-                for (auto iter2 = group2List.begin(); iter2 != group2List.end(); iter2++)
                 {
-                //cout << "thread" << id << " inner" << endl;
-                    {
-                        float localG = Dv[*iter1] + Dv[*iter2] - 2 * graph[*iter1][*iter2];
+                    float localG = Dv[*iter1] + Dv[*iter2] - 2 * graph[*iter1][*iter2];
 #ifdef debug
-                        cout << "iter1:" << *iter1 << "iter2:" << *iter2 << "localG" << localG << "maxG" << maxG << endl;
+                    cout << "iter1:" << *iter1 << "iter2:" << *iter2 << "localG" << localG << "maxG" << maxG << endl;
 #endif
-                        if (localG > LmaxG)
-                        {
+                    if (localG >= maxG)
+                    {
 
-                            /*
+                        /*
                 #ifdef debug
                 cout << "!!!!change i:" << i << "J:" << j << "localG" << localG <<"maxG"<< maxG<< endl;
                 #endif
                 */
-                            LmaxG = localG;
-                            LnodeI = iter1;
-                            LnodeJ = iter2;
-                        }
+                        maxG = localG;
+                        nodeI = iter1;
+                        nodeJ = iter2;
                     }
-                }
-                for(int i=0;i<nthread&& iter1!=group1List.end();i++) iter1++;
-            }
-#pragma omp critical
-            {
-                //cout << "thread" << id << " finish" << endl;
-                if (LmaxG >= maxG)
-                {
-
-                    maxG = LmaxG;
-                    nodeI = LnodeI;
-                    nodeJ = LnodeJ;
                 }
             }
         }
