@@ -1,3 +1,4 @@
+// list變成存node的數字
 #include <iostream>
 #include <vector>
 #include <sstream>
@@ -78,26 +79,32 @@ public:
 #ifdef debug
             cout << "new while iteration===============================" << endl;
 #endif
+            
             computeDv();
             printDv();
             vector<struct op> opList;
 
-            list<int> group1List, group2List;
+            vector<int> group1List(nodeNum), group2List(nodeNum);
+            int group1ListTop=0,group2ListTop = 0;
             for (int i = 0; i < nodeNum; i++)
             {
                 if (group[i] == 0)
-                    group1List.push_back(i);
+                {
+                    group1List[group1ListTop++] = i;
+                }
                 else
-                    group2List.push_back(i);
+                {
+                    group2List[group2ListTop++] = i;
+                }
             }
             //compute gi
             for (int i = 0; i < nodeNum / 2; i++)
             {
-                opList.push_back(compute_g(group1List, group2List));
+                auto tmp  = compute_g(group1List, group2List,&group1ListTop ,&group2ListTop );
+                opList.push_back(tmp);
 #ifdef debug
                 cout << i << " new inner for iter=======" << endl;
                 cout << opList.back();
-                printLocked();
                 printDv();
 #endif
             }
@@ -105,7 +112,6 @@ public:
             float tmpGk = 0;
             float maxGk = -1 * numeric_limits<float>::max();
             int maxGkIndex = -1;
-            cout << "fjdksfjsfdsjfsdkfskfjsdkf" << endl;
             //find k such that Gk is max
             for (int i = 0; i < opList.size(); i++)
             {
@@ -116,9 +122,6 @@ public:
                     maxGkIndex = i;
                 }
             }
-#ifdef debug
-            cout << "---maxGk:" << maxGk << "maxGkIndex:" << maxGkIndex << endl;
-#endif
             cout << "---maxGk:" << maxGk << "maxGkIndex:" << maxGkIndex << endl;
             if (maxGk <= 1e-5)
                 return;
@@ -141,81 +144,72 @@ public:
         }
     }
     // compteMaxG , lock ,recompute  Dv
-    struct op compute_g(list<int> &group1List, list<int> &group2List)
+    struct op compute_g(vector<int> &group1List, vector<int> &group2List,int* group1ListTop,int* group2ListTop)
     {
-        // nodeI ,nodeJ ,maxG
+        int nodeI=-1,nodeJ=-1;
         float maxG = -1 * numeric_limits<float>::max();
         // nodeI :group 0
         // nodeJ:group 1
-        list<int>::iterator nodeI, nodeJ;
-// find a pair makes the largest decrease
+        // find a pair makes the largest decrease
+        omp_set_num_threads(12);
 #pragma omp parallel
         {
             int nthread = omp_get_num_threads();
             int id = omp_get_thread_num();
             float LmaxG = -1 * numeric_limits<float>::max();
-            list<int>::iterator LnodeI, LnodeJ;
-            auto iter1 = group1List.begin();
-            //advance(iter1,id);
-            for(int i=0;i<id&& iter1!=group1List.end();i++) iter1++;
-            for (; iter1 != group1List.end();)
+            int LnodeI, LnodeJ;
+            for (int i = 0; i < *group1ListTop; i += nthread)
             {
-                //cout << "thread" << id << " outter" << endl;
-
-                for (auto iter2 = group2List.begin(); iter2 != group2List.end(); iter2++)
-                {
-                //cout << "thread" << id << " inner" << endl;
+                    for (int j = 0; j < *group2ListTop; j++)
                     {
-                        float localG = Dv[*iter1] + Dv[*iter2] - 2 * graph[*iter1][*iter2];
+                        float localG = Dv[group1List[i]] + Dv[group2List[j]] - 2 * graph[group1List[i]][group2List[j]];
+                #ifdef debug
+                cout << "i:" << group1List[i] << "J:" << group2List[j] << "localG" << localG <<"maxG"<< maxG<< endl;
+                #endif
 #ifdef debug
-                        cout << "iter1:" << *iter1 << "iter2:" << *iter2 << "localG" << localG << "maxG" << maxG << endl;
 #endif
-                        if (localG > LmaxG)
+                        if (localG >= LmaxG)
                         {
 
-                            /*
-                #ifdef debug
-                cout << "!!!!change i:" << i << "J:" << j << "localG" << localG <<"maxG"<< maxG<< endl;
-                #endif
-                */
                             LmaxG = localG;
-                            LnodeI = iter1;
-                            LnodeJ = iter2;
+                            LnodeI = i;
+                            LnodeJ = j;
                         }
                     }
-                }
-                for(int i=0;i<nthread&& iter1!=group1List.end();i++) iter1++;
-            }
 #pragma omp critical
-            {
-                //cout << "thread" << id << " finish" << endl;
-                if (LmaxG >= maxG)
-                {
+                    {
+                        //cout << "thread" << id << " finish" << endl;
+                        if (LmaxG >= maxG)
+                        {
 
-                    maxG = LmaxG;
-                    nodeI = LnodeI;
-                    nodeJ = LnodeJ;
-                }
+
+                            maxG = LmaxG;
+                            nodeI = LnodeI;
+                            nodeJ = LnodeJ;
+                        }
+                    }
             }
         }
-        group1List.erase(nodeI);
-        group2List.erase(nodeJ);
-        recomputeDv(*nodeI, group1List, group2List);
-        recomputeDv(*nodeJ, group1List, group2List);
         struct op result;
-        result.nodeI = *nodeI;
-        result.nodeJ = *nodeJ;
+        result.nodeI = group1List[nodeI];
+        result.nodeJ =group2List[nodeJ];
         result.g = maxG;
+        recomputeDv(group1List[nodeI], group1List, group2List,*group1ListTop,*group2ListTop);
+        recomputeDv(group2List[nodeJ], group1List, group2List,*group1ListTop,*group2ListTop);
+        group1List[nodeI] = group1List[--*group1ListTop];
+        group2List[nodeJ] = group2List[--*group2ListTop];
         return result;
     }
-    void recomputeDv(int movedNode, list<int> &group1List, list<int> &group2List)
+    void recomputeDv(int movedNode, vector<int> &group1List, vector<int> &group2List,int group1ListTop,int group2ListTop)
     {
-        for (auto item1 : group1List)
+        for (int i=0;i<group1ListTop;i++)
         {
+            int item1 = group1List[i];
             Dv[item1] += group[item1] ^ group[movedNode] ? -2 * graph[item1][movedNode] : 2 * graph[item1][movedNode];
         }
-        for (auto item2 : group2List)
+        for (int i=0;i<group2ListTop;i++)
         {
+            int item2 = group2List[i];
             Dv[item2] += group[item2] ^ group[movedNode] ? -2 * graph[item2][movedNode] : 2 * graph[item2][movedNode];
         }
     }
