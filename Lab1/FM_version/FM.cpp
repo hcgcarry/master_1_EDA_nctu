@@ -1,5 +1,6 @@
 #include <iostream>
 #include <vector>
+#include<math.h>
 #include <sstream>
 #include <limits.h>
 #include <algorithm>
@@ -23,6 +24,7 @@ struct op
 {
     int cell;
     int g;
+    float balanceRatio;
     friend ostream &operator<<(ostream &os, struct op &op_obj)
     {
         cout <<"op: cell " << op_obj.cell << " g: " << op_obj.g<< endl;
@@ -238,11 +240,11 @@ class twoBucketList{
     }
     bool passConstraint(Group group){
         if(group == Group::groupA){
-            if(CellsStat::groupACount-1 >= nodeNum * constraintRatio -1 && CellsStat::groupBCount+1 <= nodeNum * constraintRatio+1)
+            if((float)(CellsStat::groupACount-1)/nodeNum >= 0.45)
                 return true;
         }
         else if(group == Group::groupB){
-            if(CellsStat::groupBCount-1 >= nodeNum * constraintRatio -1 && CellsStat::groupACount+1 <= nodeNum * constraintRatio+1)
+            if((float)(CellsStat::groupBCount-1)/nodeNum >= 0.45)
                 return true;
         }
         return false;
@@ -277,11 +279,13 @@ class twoBucketList{
         if(!groupA.empty()&& passConstraint(Group::groupA) &&(groupB.empty() || !passConstraint(Group::groupB) ||  gainA > gainB  || (gainA == gainB && iterA->id < iterB->id))){
             maxGainOp.cell = iterA->id;
             maxGainOp.g= iterA->gain;
+            maxGainOp.balanceRatio =(float) (CellsStat::groupACount-1)/nodeNum;
             groupA.eraseCell(gainA,iterA);
         }
         else{
             maxGainOp.cell = iterB->id;
             maxGainOp.g= iterB->gain;
+            maxGainOp.balanceRatio =(float) (CellsStat::groupBCount-1)/nodeNum;
             groupB.eraseCell(gainB,iterB);
         }
         return true;
@@ -589,6 +593,7 @@ public:
             int tmpGk = 0;
             int maxGk = INT_MIN;
             int maxGkIndex = -1;
+            int balanceRatio = 0.5;
             //find k such that Gk is max
             #ifdef debug
             cout << "---------------op list--------" << endl;
@@ -599,8 +604,9 @@ public:
                 cout << opList[i] << " ";
                 #endif
                 tmpGk += opList[i].g;
-                if (tmpGk > maxGk)
+                if (tmpGk > maxGk || (tmpGk == maxGk && fabs(opList[i].balanceRatio - 0.5) <fabs(balanceRatio-0.5) ))
                 {
+                    balanceRatio = opList[i].balanceRatio;
                     maxGk = tmpGk;
                     maxGkIndex = i;
                 }

@@ -141,13 +141,7 @@ public:
         // nodeJ:group 1
         int nodeI = -1, nodeJ = -1;
         // find a pair makes the largest decrease
-        #pragma omp parallel
-        {
-            int nthred =omp_get_num_threads();
-            int id = omp_get_thread_num();
-            float LmaxG = -1 * numeric_limits<float>::max();
-            int LnodeI = -1, LnodeJ = -1;
-            #pragma omp for
+        //#pragma omp parallel
             for (int i = 0; i < nodeNum; i++)
             {
                 if (group[i] == 0 && locked[i] == 0)
@@ -188,7 +182,6 @@ public:
                         nodeJ = LnodeJ  ;
                     }
             }
-        }
         locked[nodeI] = 1;
         locked[nodeJ] = 1;
         recomputeDv(nodeI);

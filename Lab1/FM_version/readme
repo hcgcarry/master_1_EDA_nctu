@@ -1,0 +1,6 @@
+compile:
+make FM
+
+execute:
+./lab1 {input}
+
