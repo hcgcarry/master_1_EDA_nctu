@@ -11,7 +11,9 @@
 #include<unordered_set>
 //#define debug
 #define constraintRatio 0.5
+//#define testPDF
 
+//#define debug
 enum Group{
     groupA,groupB
 };
@@ -35,18 +37,7 @@ class CellsStat{
     static int groupACount;
     static int groupBCount;
     CellsStat() = delete;
-    /*
-    CellsStat(int cellNum){
-        group = vector<Group> (cellNum,Group::groupB);
-        locked = vector<bool> (cellNum,false);
-        CellsStat::groupACount = (cellNum%2)?cellNum/2+1:cellNum/2;
-        CellsStat::groupBCount = cellNum - CellsStat::groupACount;
-        for (int i = 0; i <= cellNum/ 2; i++)
-        {
-            group[i] = Group::groupA;
-        }
-    }
-    */
+    #ifdef testPDF
     CellsStat(int cellNum){
         group = vector<Group> (cellNum,Group::groupB);
         locked = vector<bool> (cellNum,false);
@@ -57,28 +48,54 @@ class CellsStat{
         group[3] = Group::groupA;
         group[6] = Group::groupA;
     }
+    #else 
+    CellsStat(int cellNum){
+        group = vector<Group> (cellNum,Group::groupB);
+        locked = vector<bool> (cellNum,false);
+        CellsStat::groupACount = cellNum/2;
+        CellsStat::groupBCount = cellNum - CellsStat::groupACount;
+        for (int i = 0; i < cellNum/ 2; i++)
+        {
+            group[i] = Group::groupA;
+        }
+    }
+    #endif
     friend ostream& operator<<(ostream& os ,CellsStat&obj){
+        #ifdef debug
         cout << "groupACount :" << obj.groupACount << endl;
         cout << "groupBCount :" << obj.groupBCount << endl;
         obj.printGroup();
         obj.printLocked();
+        #endif
         return os;
     }
     void printGroup(){
+        #ifdef debug
         cout << "===========group===============" << endl;
         for(int i=0;i<group.size();i++){
-            cout << group[i] << " ";
+            cout << i << " " ;
+        }
+        cout << endl;
+        for(int i=0;i<group.size();i++){
+            cout <<  group[i] << " ";
         }
         cout << endl;
         cout << "===========group end===============" << endl;
+        #endif
     }
     void printLocked(){
+        #ifdef debug
         cout << "===========locked===============" << endl;
+        for(int i=0;i<group.size();i++){
+            cout << i << " " ;
+        }
+        cout << endl;
         for(int i=0;i<locked.size();i++){
             cout << locked[i] << " ";
         }
         cout << endl;
         cout << "===========locked end===============" << endl;
+        #endif
     }
 };
 int CellsStat::groupACount =0;
@@ -94,35 +111,38 @@ struct singleCellStat{
     }
 
 };
+
 class bucketListClass{
     public:
     unordered_map<int,list<struct singleCellStat>::iterator> cellIterList;
-    unordered_map<int,list<struct singleCellStat>> bucketList;
+    vector<list<struct singleCellStat>> bucketList;
     int curMaxGain;
-    bucketListClass(){
+    int maxPin;
+    int curNodeCount=0;
+    bucketListClass() {};
+    void init(int maxPin){
+        this->maxPin = maxPin;
+        bucketList = vector<list<struct singleCellStat>> (maxPin*2+1);
     }
     friend ostream& operator<<(ostream& os ,bucketListClass& obj){
+        #ifdef debug
         cout << "===========bucketListClass===========" << endl;
-        cout << "curmaxgain" << obj.curMaxGain << endl;
-        vector<pair<int,list<struct singleCellStat>>> outputList;
-        for(auto item:obj.bucketList){
-            outputList.push_back(pair<int,list<struct singleCellStat>> (item.first,item.second));
-        }
-        sort(outputList.begin(),outputList.end(),[](pair<int,list<struct singleCellStat>> &tmp1,pair<int,list<struct singleCellStat>> &tmp2){
-            return tmp1.first < tmp2.first;
-        });
-        for(auto item:outputList){
-            cout << "gain:" << item.first << " "  ;
-            for(auto iter:item.second){
-                cout << "id:" << iter.id << " gain:" << iter.gain << " ";
+        cout << "curMaxGain:" << obj.curMaxGain << endl;
+        cout << "curNodeCount:" << obj.curNodeCount << endl;
+        for(int i=obj.bucketList.size()-1;i>=0;i--){
+            if(obj.bucketList[i].empty()) continue;
+            cout << "gain:" << i-obj.maxPin << " " ;
+            for(auto& cell:obj.bucketList[i]){
+                cout << "gain:" << cell.gain << " id:" << cell.id<<" ";
             }
             cout << endl;
         }
         cout << "===========bucketListClassEnd===========" << endl;
+        #endif
         return os;
     }
     bool empty(){
-        return bucketList.empty();
+        return curNodeCount == 0;
     }
     /*
     bool returnMaxGainCell(int& gain,list<struct singleCellStat>::iterator &iter){
@@ -133,38 +153,59 @@ class bucketListClass{
     }
     */
     bool returnMaxGainCell(int& gain,list<struct singleCellStat>::iterator &iter){
-        if(bucketList.empty()) return false;
+        if(empty()) return false;
+        #ifdef testPDF
         int minId =INT_MAX;
-        for(auto tmpIter= bucketList[curMaxGain].begin();tmpIter!= bucketList[curMaxGain].end();tmpIter++){
+        for(auto tmpIter= bucketList[curMaxGain+maxPin].begin();tmpIter!= bucketList[curMaxGain+maxPin].end();tmpIter++){
             if(tmpIter->id < minId){
                 minId = tmpIter->id;
                 iter = tmpIter;
             }
         }
+        #else
+        iter = bucketList[curMaxGain+maxPin].begin();
+        #endif
         gain = curMaxGain;
         return true;
     }
     void updateCurMaxGain(){
-        int gain = INT_MIN ;
-        for(auto item:bucketList){
-            if(item.second.empty()) continue;
-            gain = max(gain,item.first);
+        for(int i=curMaxGain+maxPin;i>=0;i--){
+            if(!bucketList[i].empty()){
+                curMaxGain = i-maxPin;
+                return ;
+            }
         }
-        this->curMaxGain = gain;
+        curMaxGain = INT_MIN;
     }
     void eraseCell(int gain,list<struct singleCellStat>::iterator iter){
-        bucketList[gain].erase(iter);
+        curNodeCount--;
+        bucketList[gain+maxPin].erase(iter);
         cellIterList.erase(iter->id);
-        if(bucketList[gain].empty()) bucketList.erase(gain);
-        if(gain == curMaxGain && bucketList.find(gain) == bucketList.end()){
+        if(gain == curMaxGain && bucketList[gain+maxPin].empty()){
             updateCurMaxGain();
         }
+        #ifdef debug
+        cout << "------------ eraseCell-------------"<< endl;
+        cout << "gain:" << gain << " id" << iter->id << endl;
+        cout << "curMaxGain" << curMaxGain << endl;
+        cout << *this;
+        cout << "------------ eraseCellEnd-------------"<< endl;
+        #endif
     }
     void insert(int gain,int cell){
+        curNodeCount++;
         struct singleCellStat tmpCell(cell,gain) ;
-        bucketList[gain].push_front(tmpCell);
-        cellIterList[cell] = bucketList[gain].begin();
+        bucketList[gain+maxPin].push_front(tmpCell);
+        cellIterList[cell] = bucketList[gain+maxPin].begin();
         curMaxGain = max(gain,curMaxGain);
+
+        #ifdef debug
+        cout << "------------ insertCell-------------"<< endl;
+        cout << "gain:" << gain << " id" << cell << endl;
+        cout << "curMaxGain" << curMaxGain << endl;
+        cout << *this;
+        cout << "------------ insertCellEnd-------------"<< endl;
+        #endif
     }
     void updateGain(int cell,int decOrInc){
         auto iter = cellIterList[cell];
@@ -173,6 +214,11 @@ class bucketListClass{
         gain+=decOrInc==1?1:-1;
         curMaxGain = max(gain,curMaxGain);
         insert(gain,cell);
+        #ifdef debug
+        cout << "--------------------- inner updateGain----------------------" << endl;
+        cout << *this;
+        cout << "----------------------- inner updateGainEnd------------------------" << endl;
+        #endif
     }
 };
 
@@ -182,19 +228,23 @@ class twoBucketList{
     bucketListClass groupB;
     int nodeNum;
     twoBucketList() = delete;
-    twoBucketList(int nodeNum){
-        nodeNum = nodeNum;
+    twoBucketList(int nodeNum):groupA(),groupB(){
+        this->nodeNum = nodeNum;
+    }
+    void init(int maxPin){
+        groupA.init(maxPin);
+        groupB.init(maxPin);
     }
     bool checkIFAllLocked(){
         if(groupA.bucketList.empty() && groupB.bucketList.empty()) return true;
     }
     bool passConstraint(Group group){
         if(group == Group::groupA){
-            if(CellsStat::groupACount-1 >= nodeNum * constraintRatio -1 && CellsStat::groupBCount+1 >= nodeNum * constraintRatio+1)
+            if(CellsStat::groupACount-1 >= nodeNum * constraintRatio -1 && CellsStat::groupBCount+1 <= nodeNum * constraintRatio+1)
                 return true;
         }
         else if(group == Group::groupB){
-            if(CellsStat::groupBCount-1 >= nodeNum * constraintRatio -1 && CellsStat::groupACount+1 >= nodeNum * constraintRatio+1)
+            if(CellsStat::groupBCount-1 >= nodeNum * constraintRatio -1 && CellsStat::groupACount+1 <= nodeNum * constraintRatio+1)
                 return true;
         }
         return false;
@@ -206,15 +256,28 @@ class twoBucketList{
         list<struct singleCellStat>::iterator iterB;
         groupA.returnMaxGainCell(gainA,iterA);
         groupB.returnMaxGainCell(gainB,iterB);
-        if(groupA.empty() && groupB.empty()) return false;
+        if(groupA.empty() && groupB.empty()) {
+            cout << "groupA empty ,groupB empty" << endl;
+            return false;
+        }
         if(!passConstraint(Group::groupA)){
-            if(groupB.empty())return false;
+            if(groupB.empty()){
+            #ifdef debug
+                cout << "groupA not pass constraint,groupB empty" << endl;
+                #endif
+                return false;
+            }
         } 
         if(!passConstraint(Group::groupB)){
-            if(groupA.empty())return false;
+            if(groupA.empty()){
+        #ifdef debug
+                cout << "groupA empty ,groupB not pass constraint" << endl;
+                #endif
+                return false;
+            }
         } 
 
-        if(groupB.empty() || !passConstraint(Group::groupB) ||  gainA > gainB  || (gainA == gainB && iterA->id < iterB->id)){
+        if(!groupA.empty()&& passConstraint(Group::groupA) &&(groupB.empty() || !passConstraint(Group::groupB) ||  gainA > gainB  || (gainA == gainB && iterA->id < iterB->id))){
             maxGainOp.cell = iterA->id;
             maxGainOp.g= iterA->gain;
             groupA.eraseCell(gainA,iterA);
@@ -245,12 +308,14 @@ class twoBucketList{
 
     }
     void print(){
+        #ifdef debug
         cout << "=============gain===========" << endl;
         cout << "groupA" << endl;
         cout <<groupA << endl;
         cout << "groupB" << endl;
         cout <<groupB << endl;
         cout << "=============gain End===========" << endl;
+        #endif
     }
 
 };
@@ -259,7 +324,9 @@ struct NetStat{
     int countOfGroupA=0;
     int countOfGroupB=0;
     friend ostream& operator<<(ostream&os ,struct NetStat& obj){
+        #ifdef debug
             cout << "id: " << obj.id << "countOfGroupA: " << obj.countOfGroupA << "countOFGroupB: " << obj.countOfGroupB << endl;
+        #endif
             return os;
     }
 };
@@ -277,6 +344,7 @@ class Graph{
         printCellAdjNets();
     }
     void printNetConnectCells(){
+        #ifdef debug
         cout << "==============netconnectcells===========" << endl;
         for(int i=0;i<netConnectCells.size();i++){
             cout << "net:" << i;
@@ -286,8 +354,10 @@ class Graph{
             cout << endl;
         }
         cout << "==============netconnectcellsEnd===========" << endl;
+        #endif
     }
     void printCellAdjNets(){
+        #ifdef debug
         cout << "==============CellAdjNets===========" << endl;
         for(int i=0;i<cellAdjNets.size();i++){
             cout << "cell:" << i;
@@ -297,6 +367,7 @@ class Graph{
             cout << endl;
         }
         cout << "==============CellAdjNets===========" << endl;
+        #endif
     }
         
     void buildGraph(){
@@ -321,6 +392,13 @@ class Graph{
             curNetIndex++;
         }
     }
+    int getMaxPin(){
+        int maxPin = INT_MIN;
+        for(auto item:cellAdjNets){
+            maxPin = max(maxPin,(int)item.size());
+        }
+        return maxPin;
+    }
 };
 
 class FM
@@ -337,22 +415,33 @@ public:
     {
         this->netNum = netNum;
         this->nodeNum = nodeNum;
+        int maxPin = GraphObj.getMaxPin();
+        twoBucketListObj.init(maxPin);
     }
     void printNetStatList(){
+        #ifdef debug
         cout << "===============NetStatList========="<< endl;
         for(auto item:NetStatList){
             cout << item;
         }
         cout << "===============NetStatList End========="<< endl;
+        #endif
     }
     void init(){
         initNetStatList();
-        initComputeGain();
-        cout << "====init====" << endl;
+        #ifdef debug
+        cout << "====init@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"<< endl;
+        printAllStatus();
+        cout << "====initEnd@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@"<< endl;
+        #endif
+    }
+    void printAllStatus(){
+        #ifdef debug
         printNetStatList();
         twoBucketListObj.print();
         cout <<CellsStatObj;
-        cout << "====initEnd====" << endl;
+        #endif
+
     }
     void initNetStatList(){
         for(int i=0;i<NetStatList.size();i++){
@@ -380,12 +469,13 @@ public:
         }
     }
     void updateCellGain(int cell){
-        cout << "=============update gain===========" << endl;
-        twoBucketListObj.print();
-        cout << "=============update gain End===========" << endl;
+        #ifdef debug
+        cout << "*************update gain***********"<< endl;
+        printAllStatus();
+        cout << "**************update gain End************"<< endl;
+        #endif
         auto fromGroup = CellsStatObj.group[cell];
-        changGroup(cell);
-        CellsStatObj.locked[cell] =true;
+        CellsStatObj.locked[cell] = true;
         for(auto& net:GraphObj.cellAdjNets[cell]){
             auto curNetStat = &NetStatList[net];
             int Tvalue = T(cell,curNetStat);
@@ -404,6 +494,9 @@ public:
             curNetStat->countOfGroupA += fromGroup == Group::groupA?-1:1;
             curNetStat->countOfGroupB += fromGroup == Group::groupB?-1:1;
 
+        #ifdef debug
+            cout << "----------update FValue---------" << endl;
+            #endif
             int Fvalue = F(cell,curNetStat);
             if(Fvalue == 0){
                 for(auto tmpCell:GraphObj.netConnectCells[net]){
@@ -417,15 +510,19 @@ public:
                      twoBucketListObj.updateGain(tmpCell,CellsStatObj.group[tmpCell],1);
                 }
             }
+        #ifdef debug
+            cout << "----curCell:" <<cell <<endl;
+            cout << "net:" << net << " Tvalue:" << Tvalue << " Fvalue:" << Fvalue <<endl;
+            #endif
             
             
         }
+        changGroup(cell);
     }
     void changGroup(int cell){
         CellsStat::groupACount+= CellsStatObj.group[cell]== Group::groupA?-1:1;
         CellsStat::groupBCount+= CellsStatObj.group[cell]== Group::groupB?-1:1;
         CellsStatObj.group[cell] = CellsStatObj.group[cell]== Group::groupA?Group::groupB:Group::groupA;
-        CellsStatObj.locked[cell] = true;
     }
     int T(int cell,struct NetStat* net){
         if(CellsStatObj.group[cell] ==Group::groupA){
@@ -469,26 +566,40 @@ public:
 
             cout << "!!!!!!!!!!!!!!!!!!new while iteration!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"<< endl;
 
+        #ifdef debug
             cout << "----before change the group---" << endl;
             cout << CellsStatObj ;
+            #endif
             vector<Group> groupBackup = CellsStatObj.group;
             int groupACountBackup = CellsStat::groupACount;
             int groupBCountBackup = CellsStat::groupBCount;
-            vector<struct NetStat> NetStatListBackup(NetStatList);
+            vector<struct NetStat> NetStatListBackup = NetStatList;
 
             vector<struct op> opList;
             //compute gi
             struct op maxGainOp;
+            initComputeGain();
             while(twoBucketListObj.findMaxGainCell(maxGainOp)){
+                updateCellGain(maxGainOp.cell);
                 opList.push_back(maxGainOp);
-                cout << opList.back();
+                #ifdef debug
+                printAllStatus();
+                cout << "result~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ " << opList.back();
+                #endif
             }
+            cout << endl;
             int tmpGk = 0;
             int maxGk = INT_MIN;
             int maxGkIndex = -1;
             //find k such that Gk is max
+            #ifdef debug
+            cout << "---------------op list--------" << endl;
+            #endif
             for (int i = 0; i < opList.size(); i++)
             {
+                #ifdef debug
+                cout << opList[i] << " ";
+                #endif
                 tmpGk += opList[i].g;
                 if (tmpGk > maxGk)
                 {
@@ -496,7 +607,7 @@ public:
                     maxGkIndex = i;
                 }
             }
-            cout << "---maxGk:" << maxGk << "maxGkIndex:" << maxGkIndex << endl;
+            cout << "---maxGk:" << maxGk << " maxGkIndex:" << maxGkIndex << endl;
             if (maxGk <= 0)
                 return;
             // change the group
@@ -529,8 +640,11 @@ public:
                 CellsStat::groupACount = groupACountBackup;
                 CellsStat::groupBCount = groupBCountBackup;
             }
+            #ifdef debug
             cout << "----after change the group---" << endl;
             cout << CellsStatObj;
+            printNetStatList();
+            #endif
             // unlock
             for (int i = 0; i < nodeNum; i++)
             {
