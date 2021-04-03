@@ -116,7 +116,7 @@ class bucketListClass{
     public:
     unordered_map<int,list<struct singleCellStat>::iterator> cellIterList;
     vector<list<struct singleCellStat>> bucketList;
-    int curMaxGain;
+    int curMaxGain = INT_MIN;
     int maxPin;
     int curNodeCount=0;
     bucketListClass() {};
@@ -125,7 +125,6 @@ class bucketListClass{
         bucketList = vector<list<struct singleCellStat>> (maxPin*2+1);
     }
     friend ostream& operator<<(ostream& os ,bucketListClass& obj){
-        #ifdef debug
         cout << "===========bucketListClass===========" << endl;
         cout << "curMaxGain:" << obj.curMaxGain << endl;
         cout << "curNodeCount:" << obj.curNodeCount << endl;
@@ -138,7 +137,6 @@ class bucketListClass{
             cout << endl;
         }
         cout << "===========bucketListClassEnd===========" << endl;
-        #endif
         return os;
     }
     bool empty(){
@@ -257,7 +255,6 @@ class twoBucketList{
         groupA.returnMaxGainCell(gainA,iterA);
         groupB.returnMaxGainCell(gainB,iterB);
         if(groupA.empty() && groupB.empty()) {
-            cout << "groupA empty ,groupB empty" << endl;
             return false;
         }
         if(!passConstraint(Group::groupA)){
@@ -573,7 +570,8 @@ public:
             vector<Group> groupBackup = CellsStatObj.group;
             int groupACountBackup = CellsStat::groupACount;
             int groupBCountBackup = CellsStat::groupBCount;
-            vector<struct NetStat> NetStatListBackup = NetStatList;
+            vector<struct NetStat> NetStatListBackup;
+            NetStatListBackup =  NetStatList;
 
             vector<struct op> opList;
             //compute gi
