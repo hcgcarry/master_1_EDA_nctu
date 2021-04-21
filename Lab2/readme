@@ -1,0 +1,7 @@
+## compile
+
+make
+
+## run
+
+./studentID_lab2.o [input.in] [output file name] 
