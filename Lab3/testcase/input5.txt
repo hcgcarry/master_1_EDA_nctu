@@ -1,0 +1,5 @@
+ABcD+ABCD+aBcD+aBCD.
+A 0.7
+B 0.8
+C 0.5
+D 0.4

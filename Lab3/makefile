@@ -1,3 +1,3 @@
-all:main
+all:309551111_lab3
 %:%.cpp
-	g++ main.cpp -o Lab3 -O3 -g
+	g++ $< -o Lab3 -O3 -g

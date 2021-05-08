@@ -1,0 +1,15 @@
+ABcDefghijklmn+ABCDEfgHi+aBcDeFGJk+aBCDefg.
+A 0.7
+B 0.8
+C 0.5
+D 0.4
+e 0.3
+f 0.7
+g 0.8
+h 0.7
+i 0.8
+j 0.5
+k 0.4
+l 0.3
+m 0.7
+n 0.8
