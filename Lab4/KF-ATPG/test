@@ -1,0 +1,67 @@
+./KF_ATPG -atpg R -cir example/c19.bench -path_not example/c19.path_not -output c19_R.pttn
+UC Santa Barbara, "KF-ATPG" Path-Delay-ATPG v2.0 (compiled 30-May-21 at 7:51 PM by Lu Feng and Kai Yang)
+Start parsing input file: example/c19.bench
+Covert To Lu Feng's Format...
+CPU Time Usage for "Construct Circuit" = 0
+CPU Time Usage for "Build ATPG Objectives" = 0
+---------------------new build from path_R--------------
+------------path dump 
+g1GAT_0_ R g_169_ R g22GAT_10_ R 
+preT0 preG->getFunction 0
+prevOnInputTransition:0 prevOnInputTransitionCV:0 prevOnInputGate:g1GAT_0_
+curGate:g_169_ func3 controlValu:0
+---atpg dump:g1GAT_0__dup_t0(0) g1GAT_0__dup_t1(1) g2GAT_1__dup_t1(1) 
+prevOnInputTransition:0 prevOnInputTransitionCV:0 prevOnInputGate:g_169_
+curGate:g22GAT_10_ func3 controlValu:0
+---atpg dump:g1GAT_0__dup_t0(0) g1GAT_0__dup_t1(1) g2GAT_1__dup_t1(1) g_171__dup_t1(1) 
+---------final ---atpg dump
+g1GAT_0__dup_t0(0) g1GAT_0__dup_t1(1) g2GAT_1__dup_t1(1) g_171__dup_t1(1) 
+==== new gate on path===
+R or F:0 func:0 name:g1GAT_0_
+_fanin:
+_fanout:g_169_
+==== new gate on path===
+R or F:0 func:3 name:g_169_
+_fanin:g1GAT_0_ g2GAT_1_ 
+_fanout:g22GAT_10_
+==== new gate on path===
+R or F:0 func:3 name:g22GAT_10_
+_fanin:g_169_ g_171_ 
+_fanout:PO_g22GAT_10_
+---------------------new build from path_R--------------
+------------path dump 
+g2GAT_1_ R g_169_ R g22GAT_10_ R 
+preT0 preG->getFunction 0
+prevOnInputTransition:0 prevOnInputTransitionCV:0 prevOnInputGate:g2GAT_1_
+curGate:g_169_ func3 controlValu:0
+---atpg dump:g2GAT_1__dup_t0(0) g2GAT_1__dup_t1(1) g1GAT_0__dup_t1(1) 
+prevOnInputTransition:0 prevOnInputTransitionCV:0 prevOnInputGate:g_169_
+curGate:g22GAT_10_ func3 controlValu:0
+---atpg dump:g2GAT_1__dup_t0(0) g2GAT_1__dup_t1(1) g1GAT_0__dup_t1(1) g_171__dup_t1(1) 
+---------final ---atpg dump
+g2GAT_1__dup_t0(0) g2GAT_1__dup_t1(1) g1GAT_0__dup_t1(1) g_171__dup_t1(1) 
+==== new gate on path===
+R or F:0 func:0 name:g2GAT_1_
+_fanin:
+_fanout:g_169_
+==== new gate on path===
+R or F:0 func:3 name:g_169_
+_fanin:g1GAT_0_ g2GAT_1_ 
+_fanout:g22GAT_10_
+==== new gate on path===
+R or F:0 func:3 name:g22GAT_10_
+_fanin:g_169_ g_171_ 
+_fanout:PO_g22GAT_10_
+
+CPU Time Usage for "Solve ATPG Objectives" = 0
+// ----------------------------------
+// NON-ROBUST Path Sensitization Criteria
+// Scan Chain: Functional-Justification
+// Number of Time Frame = 2
+// Set Unknown PI to ZERO
+// Number of Testable Path = 2
+// Number of Un-Testable Path = 0
+// Number of NOT SOLVED Path = 0
+// Test Coverage = 100%
+// ----------------------------------
+CPU Time Usage for "Total Process" = 0

@@ -1,0 +1,9 @@
+# C19.iscas
+INPUT(g1GAT_0_)
+INPUT(g2GAT_1_)
+INPUT(g3GAT_2_)
+INPUT(g4GAT_3_)
+OUTPUT(g22GAT_10_)
+g_169_ = AND(g1GAT_0_,g2GAT_1_)
+g_171_ = OR(g3GAT_2_,g4GAT_3_)
+g22GAT_10_ = AND(g_169_,g_171_)
