@@ -81,3 +81,10 @@ test19R:
 	./KF_ATPG -atpg R -cir example/c19.bench -path_not example/c19.path_not -output c19_R.pttn
 test20R:
 	./KF_ATPG -atpg R -cir example/c20.bench -path_not example/c20.path_not -output c20_R.pttn
+
+test17NR:
+	./KF_ATPG -atpg NR -cir example/c17.bench -path_not example/c17.path_not -output c17_NR.pttn
+	diff ./c17_NR.pttn ../case1_ans/c17_NR.pttn
+test27NR:
+	./KF_ATPG -atpg NR -cir example/s27.bench -path_not example/s27.path_not -output s27_NR.pttn
+	diff ./s27_NR.pttn ../case2_ans/s27_NR.pttn
